@@ -1,0 +1,80 @@
+on:
+  pull_request:
+  push:
+jobs:
+  sbuild:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distribution:
+        - codename: trixie
+          mirror: http://deb.debian.org/debian/
+          keyring:
+            package: debian-archive-keyring
+            path: /usr/share/keyrings/debian-archive-keyring.gpg
+        arch:
+        - deb: amd64
+          qemu: amd64
+        - deb: arm64
+          qemu: aarch64
+    steps:
+    - run: sudo apt-get update
+    - run: >-
+        sudo apt-get install -y --no-install-recommends
+        sbuild
+        schroot
+        mmdebstrap
+        ${{ matrix.distribution.keyring.package }}
+        qemu-user-static
+        binfmt-support
+        arch-test
+        debhelper
+        devscripts
+    - run: echo "$SBUILD_CONF" > ~/.sbuildrc
+      env:
+        SBUILD_CONF: |-
+          # Set the chroot mode to be unshare.
+          $chroot_mode = 'unshare';
+
+          # Build Architecture: all packages; this is the same as passing `-A` to sbuild.
+          $build_arch_all = 1;
+
+          # Build the source in addition to the other requested build artifacts.
+          # Without this, <BINARY>.changes files will not include the upstream source in
+          # their list and will fail uploads to Debian if they are for a -1 revision that
+          # includes a new upstream release; this is the same as passing `-s` to sbuild.
+          $build_source = 1;
+
+          # Produce a source.changes file suitable for a source-only upload;
+          # this is the same as passing `--source-only-changes` to sbuild.
+          $source_only_changes = 1;
+
+          ## Run lintian after every build (in the same chroot as the build); use --no-run-lintian to override.
+          $run_lintian = 1;
+          # Display info tags.
+          $lintian_opts = ['--display-info', '--verbose', '--fail-on', 'error,warning', '--info'];
+    - if: matrix.arch.qemu != 'amd64'
+      run: sudo update-binfmts --enable qemu-${{ matrix.arch.qemu }}
+    - uses: actions/checkout@v4
+    - run: mkdir -p ~/.cache/sbuild
+    - run: >-
+        mmdebstrap
+        --skip=output/dev
+        --variant=buildd
+        --arch=${{ matrix.arch.deb }}
+        --keyring=${{ matrix.distribution.keyring.path }}
+        ${{ matrix.distribution.codename }}
+        ~/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        ${{ matrix.distribution.mirror }}
+    - run: mkdir -p out
+    - run: >-
+        sbuild
+        --nolog
+        --build-dir=out
+        --dist=${{ matrix.distribution.codename }}
+        --arch=${{ matrix.arch.deb }}
+        --chroot ~/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}
+        path: out/

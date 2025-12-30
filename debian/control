@@ -1,0 +1,18 @@
+Source: xsscmd
+Section: utils
+Priority: optional
+Maintainer: schnusch <schnusch@users.noreply.github.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ libx11-dev,
+ libxss-dev,
+Standards-Version: 4.6.0
+Homepage: https://github.com/schnusch/xsscmd
+Rules-Requires-Root: no
+
+Package: xsscmd
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Run shell commands based on X11 Screen Saver extension's idle time

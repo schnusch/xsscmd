@@ -1,0 +1,3 @@
+tar-ignore = ".cache"
+tar-ignore = ".git"
+tar-ignore = "out"

@@ -56,16 +56,30 @@ jobs:
     - if: matrix.arch.qemu != 'amd64'
       run: sudo update-binfmts --enable qemu-${{ matrix.arch.qemu }}
     - uses: actions/checkout@v4
-    - run: mkdir -p ~/.cache/sbuild
-    - run: >-
+
+    - id: cache-mmdebstrap-restore
+      uses: actions/cache/restore@v4
+      with:
+        key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+    - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
+      run: mkdir -p .cache/sbuild
+    - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
+      run: >-
         mmdebstrap
         --skip=output/dev
         --variant=buildd
         --arch=${{ matrix.arch.deb }}
         --keyring=${{ matrix.distribution.keyring.path }}
         ${{ matrix.distribution.codename }}
-        ~/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
         ${{ matrix.distribution.mirror }}
+    - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+
     - run: mkdir -p out
     - run: >-
         sbuild
@@ -73,7 +87,8 @@ jobs:
         --build-dir=out
         --dist=${{ matrix.distribution.codename }}
         --arch=${{ matrix.arch.deb }}
-        --chroot ~/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        --chroot=$PWD/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}

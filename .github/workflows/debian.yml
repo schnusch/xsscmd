@@ -4,6 +4,11 @@ on:
 jobs:
   sbuild:
     runs-on: ubuntu-latest
+    services:
+      aptcache:
+        image: sameersbn/apt-cacher-ng
+        ports:
+        - 3142:3142
     strategy:
       matrix:
         distribution:
@@ -18,6 +23,9 @@ jobs:
         - deb: arm64
           qemu: aarch64
     steps:
+    - run: >-
+        echo 'Acquire::http::Proxy "http://localhost:3142";'
+        | sudo tee /etc/apt/apt.conf.d/01proxy
     - run: sudo apt-get update
     - run: >-
         sudo apt-get install -y --no-install-recommends
@@ -71,6 +79,7 @@ jobs:
         --variant=buildd
         --arch=${{ matrix.arch.deb }}
         --keyring=${{ matrix.distribution.keyring.path }}
+        --aptopt='Acquire::http::Proxy "http://localhost:3142";'
         ${{ matrix.distribution.codename }}
         .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
         ${{ matrix.distribution.mirror }}

@@ -100,3 +100,54 @@ jobs:
       with:
         name: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}
         path: out/
+
+  reprepro:
+    runs-on: ubuntu-latest
+    needs: sbuild
+    steps:
+    - run: sudo apt-get update
+    - run: >-
+        sudo apt-get install -y --no-install-recommends
+        reprepro
+
+    - uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    - run: mkdir -p repo/conf
+    - run: echo "$REPREPRO_DISTRIBUTIONS" > repo/conf/distributions
+      env:
+        REPREPRO_DISTRIBUTIONS: |-
+          Codename: trixie
+          Components: main
+          Architectures: amd64 arm64
+    - run: reprepro -b repo includedeb trixie artifacts/trixie-*/*.deb
+    - run: rm -fr repo/conf repo/db
+
+    - run: >-
+        sudo apt-get install -y --no-install-recommends
+        exiftool
+    - uses: actions/setup-python@v6
+      with:
+        python-version: 3.x
+    - run: pip install https://github.com/swantzter/staticdirindex/archive/refs/tags/v1.11.tar.gz
+    - run: ln -s repo "${GITHUB_REPOSITORY##*/}"
+    - run: staticdirindex --baseurl "/${GITHUB_REPOSITORY##*/}" "${GITHUB_REPOSITORY##*/}"
+
+    - uses: actions/upload-pages-artifact@v3
+      id: repo
+      with:
+        path: repo/
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      id-token: write
+      pages: write
+    runs-on: ubuntu-latest
+    needs: reprepro
+    steps:
+    - id: repo
+      uses: actions/deploy-pages@v4

@@ -22,25 +22,6 @@ jobs:
           qemu: amd64
         - deb: arm64
           qemu: aarch64
-        include:
-        - distribution:
-            codename: noble
-            mirror: http://azure.archive.ubuntu.com/ubuntu/
-            keyring:
-              package: ubuntu-keyring
-              path: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-          arch:
-            deb: amd64
-            qemu: amd64
-        - distribution:
-            codename: noble
-            mirror: http://azure.ports.ubuntu.com/ubuntu-ports/
-            keyring:
-              package: ubuntu-keyring
-              path: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-          arch:
-            deb: arm64
-            qemu: arm64
     steps:
     - run: >-
         echo 'Acquire::http::Proxy "http://localhost:3142";'

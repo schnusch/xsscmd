@@ -90,6 +90,7 @@ jobs:
     - run: >-
         sbuild
         --nolog
+        --no-run-lintian
         --build-dir=out
         --dist=${{ matrix.distribution.codename }}
         --arch=${{ matrix.arch.deb }}

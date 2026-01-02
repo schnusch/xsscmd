@@ -61,7 +61,7 @@ jobs:
           $run_lintian = 1;
           # Display info tags.
           $lintian_opts = ['--display-info', '--verbose', '--fail-on', 'error,warning', '--info'];
-    - if: matrix.arch.qemu != "amd64"
+    - if: matrix.arch.qemu != 'amd64'
       run: sudo update-binfmts --enable qemu-${{ matrix.arch.qemu }}
     - uses: actions/checkout@v4
 

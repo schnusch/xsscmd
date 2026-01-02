@@ -110,6 +110,7 @@ jobs:
     - run: >-
         sudo apt-get install -y --no-install-recommends
         reprepro
+        tree
     - uses: actions/download-artifact@v4
       with:
         path: artifacts
@@ -121,7 +122,10 @@ jobs:
           Components: main
           Architectures: amd64 arm64
     - run: reprepro -b repo includedeb trixie artifacts/trixie-*/*.deb
-    - run: find . -exec ls -dhlp {} +
+    - run: >-
+        cd repo &&
+        find . -type d
+        -exec sh -c 'cd "$1" && exec tree -o "$1/index.html" -I index.html -aisL 1 -H "" -T "${1#./}"' - {} \;
     - uses: actions/upload-pages-artifact@v3
       id: repo
       with:

@@ -125,7 +125,7 @@ jobs:
     - run: >-
         cd repo &&
         find . -type d
-        -exec sh -c 'cd "$1" && exec tree -o "$1/index.html" -I index.html -aisL 1 -H "" -T "${1#./}"' - {} \;
+        -exec sh -c 'cd "$1" && exec tree -o index.html -I index.html -aisL 1 -H "" -T "${1#./}"' - {} \;
     - uses: actions/upload-pages-artifact@v3
       id: repo
       with:

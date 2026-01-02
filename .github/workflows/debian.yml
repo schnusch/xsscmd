@@ -118,7 +118,7 @@ jobs:
         REPREPRO_DISTRIBUTIONS: |-
           Codename: trixie
           Components: main
-          Architectures: arm64
+          Architectures: amd64 arm64
     - run: reprepro -b repo includedeb trixie artifacts/trixie-*/*.deb
     - run: find . -exec ls -dhlp {} +
     - uses: actions/upload-pages-artifact@v3

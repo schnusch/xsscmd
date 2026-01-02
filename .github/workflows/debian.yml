@@ -17,10 +17,35 @@ jobs:
         distribution:
         - codename: trixie
           mirror: http://deb.debian.org/debian/
+          components:
+          - main
           keyring:
             package: debian-archive-keyring
             path: /usr/share/keyrings/debian-archive-keyring.gpg
           container_image: docker.io/library/debian
+        include:
+        - arch: amd64
+          distribution:
+            codename: noble
+            mirror: http://azure.archive.ubuntu.com/ubuntu/
+            components:
+            - main
+            - universe
+            keyring:
+              package: ubuntu-keyring
+              path: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+            container_image: docker.io/library/ubuntu
+        - arch: arm64
+          distribution:
+            codename: noble
+            mirror: http://azure.ports.ubuntu.com/ubuntu-ports/
+            components:
+            - main
+            - universe
+            keyring:
+              package: ubuntu-keyring
+              path: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+            container_image: docker.io/library/ubuntu
     steps:
     - run: >-
         echo 'Acquire::http::Proxy "http://localhost:3142";'
@@ -81,6 +106,7 @@ jobs:
         --arch=${{ matrix.arch }}
         --keyring=${{ matrix.distribution.keyring.path }}
         --aptopt='Acquire::http::Proxy "http://localhost:3142";'
+        --components=${{ join(matrix.distribution.components, ',') }}
         ${{ matrix.distribution.codename }}
         .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
         ${{ matrix.distribution.mirror }}

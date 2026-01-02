@@ -110,7 +110,6 @@ jobs:
     - run: >-
         sudo apt-get install -y --no-install-recommends
         reprepro
-        tree
     - uses: actions/download-artifact@v4
       with:
         path: artifacts
@@ -122,10 +121,11 @@ jobs:
           Components: main
           Architectures: amd64 arm64
     - run: reprepro -b repo includedeb trixie artifacts/trixie-*/*.deb
-    - run: >-
-        cd repo &&
-        find . -type d
-        -exec sh -c 'cd "$1" && exec tree -o index.html -I index.html -aisL 1 -H "" -T "${1#./}"' - {} \;
+    - uses: actions/setup-python@v6
+      with:
+        python-version: 3.x
+    - run: pip install https://github.com/swantzter/staticdirindex/archive/refs/tags/v1.11.tar.gz
+    - run: staticdirindex repo
     - uses: actions/upload-pages-artifact@v3
       id: repo
       with:

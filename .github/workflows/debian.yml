@@ -139,6 +139,46 @@ jobs:
     - uses: actions/upload-pages-artifact@v3
       with:
         path: repo/
+    - uses: actions/upload-artifact@v4
+      with:
+        name: repo
+        path: repo/
+
+  install:
+    runs-on: ubuntu-latest
+    needs: reprepro
+    strategy:
+      matrix: *matrix
+    steps:
+    - if: matrix.arch.qemu != 'amd64'
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: ${{ matrix.arch.qemu }}
+    - uses: docker/setup-buildx-action@v3
+    - uses: actions/download-artifact@v4
+      with:
+        name: repo
+        path: repo/
+    - run: echo "$DOCKERFILE" > Dockerfile
+      env:
+        DOCKERFILE: |-
+          FROM ${{ matrix.distribution.container_image }}:${{ matrix.distribution.codename }}
+          COPY repo/ /tmp/repo
+          COPY <<eof /etc/apt/sources.list.d/xsscmd.sources
+          Types: deb
+          URIs: file:///tmp/repo
+          Suites: ${{ matrix.distribution.codename }}
+          Components: main
+          Trusted: yes
+          eof
+          RUN ["apt-get", "update"]
+          RUN ["apt-get", "install", "-y", "--no-install-recommends", "xsscmd"]
+          RUN xsscmd || [ $? -eq 2 ]
+    - uses: docker/build-push-action@v6
+      with:
+        push: false
+        platform: linux/${{ matrix.arch.deb }}
+        context: .
 
   publish:
     if: github.ref == 'refs/heads/main'
@@ -149,39 +189,6 @@ jobs:
       id-token: write
       pages: write
     runs-on: ubuntu-latest
-    needs: reprepro
+    needs: install
     steps:
     - uses: actions/deploy-pages@v4
-
-  install:
-    runs-on: ubuntu-latest
-    needs: publish
-    strategy:
-      matrix: *matrix
-    steps:
-    - if: matrix.arch.qemu != 'amd64'
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: ${{ matrix.arch.qemu }}
-    - uses: docker/setup-buildx-action@v3
-    - run: |
-        tee Dockerfile <<- eof
-        	FROM ${{ matrix.distribution.container_image }}:${{ matrix.distribution.codename }}
-        	RUN apt-get update
-        	RUN apt-get install -y --no-install-recommends ca-certificates
-        	COPY <<file /etc/apt/sources.list.d/xsscmd.sources
-        		Types: deb
-        		URIs: https://$GITHUB_REPOSITORY_OWNER.github.io/${GITHUB_REPOSITORY##*/}
-        		Suites: ${{ matrix.distribution.codename }}
-        		Components: main
-        		Trusted: yes
-        	file
-        	RUN apt-get update
-        	RUN apt-get install -y --no-install-recommends xsscmd
-        	RUN xsscmd || [ \$? -eq 2 ]
-        eof
-    - uses: docker/build-push-action@v6
-      with:
-        push: false
-        platform: linux/${{ matrix.arch.deb }}
-        context: .

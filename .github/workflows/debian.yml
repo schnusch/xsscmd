@@ -71,7 +71,8 @@ jobs:
       with:
         key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
         path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
-    - run: mkdir -p .cache/sbuild
+    - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
+      run: mkdir -p .cache/sbuild
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
       run: >-
         mmdebstrap
@@ -83,7 +84,8 @@ jobs:
         ${{ matrix.distribution.codename }}
         .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
         ${{ matrix.distribution.mirror }}
-    - uses: actions/cache/save@v4
+    - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
       with:
         key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
         path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst

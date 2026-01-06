@@ -141,7 +141,7 @@ jobs:
 
   install:
     runs-on: ubuntu-latest
-    needs: sbuild
+    needs: reprepro
     strategy:
       matrix: *matrix
     steps:

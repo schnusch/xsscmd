@@ -164,7 +164,7 @@ jobs:
         	COPY repo/ /tmp/repo
         	COPY <<file /etc/apt/sources.list.d/xsscmd.sources
         		Types: deb
-        		URIs: file:///tmp/repo
+        		URIs: file://$PWD/repo
         		Suites: ${{ matrix.distribution.codename }}
         		Components: main
         		Trusted: yes

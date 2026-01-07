@@ -69,8 +69,8 @@ jobs:
     - id: cache-mmdebstrap-restore
       uses: actions/cache/restore@v4
       with:
-        key: mmdebstrap-${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zstd
-        path: .cache/sbuild/mmdebstrap-${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zstd
+        key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
       run: mkdir -p .cache/sbuild
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
@@ -82,13 +82,13 @@ jobs:
         --keyring=${{ matrix.distribution.keyring.path }}
         --aptopt='Acquire::http::Proxy "http://localhost:3142";'
         ${{ matrix.distribution.codename }}
-        .cache/sbuild/mmdebstrap-${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zstd
+        .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
         ${{ matrix.distribution.mirror }}
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        key: mmdebstrap-${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zstd
-        path: .cache/sbuild/mmdebstrap-${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zstd
+        key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
 
     - run: mkdir -p out
     - run: >-
@@ -97,7 +97,7 @@ jobs:
         --build-dir=out
         --dist=${{ matrix.distribution.codename }}
         --arch=${{ matrix.arch.deb }}
-        --chroot=$PWD/.cache/sbuild/mmdebstrap-${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zstd
+        --chroot=$PWD/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
 
     - uses: actions/upload-artifact@v4
       with:

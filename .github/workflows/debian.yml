@@ -90,18 +90,18 @@ jobs:
         key: ${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
         path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
 
-    - run: mkdir -p out
+    - run: mkdir -p out/${{ matrix.distribution.codename }}/${{ matrix.arch }}
     - run: >-
         sbuild
         --nolog
-        --build-dir=out
+        --build-dir=out/${{ matrix.distribution.codename }}/${{ matrix.arch }}
         --dist=${{ matrix.distribution.codename }}
         --arch=${{ matrix.arch }}
         --chroot=$PWD/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
 
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.distribution.codename }}-${{ matrix.arch }}
+        name: out-${{ matrix.distribution.codename }}-${{ matrix.arch }}
         path: out/
 
   reprepro:
@@ -115,16 +115,38 @@ jobs:
 
     - uses: actions/download-artifact@v4
       with:
-        path: artifacts
-    - run: mkdir -p repo/conf
-    - run: echo "$REPREPRO_DISTRIBUTIONS" > repo/conf/distributions
-      env:
-        REPREPRO_DISTRIBUTIONS: |-
-          Codename: trixie
-          Components: main
-          Architectures: amd64 arm64
-    - run: reprepro -b repo includedeb trixie artifacts/trixie-*/*.deb
-    - run: rm -fr repo/conf repo/db
+        pattern: out-*
+        path: out/
+        merge-multiple: true
+    - name: ... | tee repo/conf/distributions
+      run: |
+        cd out
+        for codename in *; do
+            mkdir -p "../repos/$codename/conf"
+            {
+                echo "Codename: $codename"
+                echo 'Components: main'
+                echo "Architectures: $(cd "$codename" && echo *) source"
+            } | (PS4='$ '; set -x; tee "../repos/$codename/conf/distributions")
+        done
+    - name: reprepro ...
+      run: |
+        cd out
+        for codename in *; do
+            cd "$codename"
+            for arch in *; do
+                (
+                    PS4='$ '
+                    set -x
+                    reprepro \
+                        -b "../../repos/$codename" \
+                        -C main \
+                        include "$codename" "$arch"/*_"$arch".changes
+                )
+            done
+            cd ..
+        done
+    - run: rm -fr repos/*/conf repos/*/db
 
     - run: >-
         sudo apt-get install -y --no-install-recommends
@@ -133,16 +155,16 @@ jobs:
       with:
         python-version: 3.x
     - run: pip install https://github.com/swantzter/staticdirindex/archive/refs/tags/v1.11.tar.gz
-    - run: ln -s repo "${GITHUB_REPOSITORY##*/}"
+    - run: ln -s repos "${GITHUB_REPOSITORY##*/}"
     - run: staticdirindex --baseurl "/${GITHUB_REPOSITORY##*/}" "${GITHUB_REPOSITORY##*/}"
 
     - uses: actions/upload-pages-artifact@v3
       with:
-        path: repo/
+        path: repos/
     - uses: actions/upload-artifact@v4
       with:
-        name: repo
-        path: repo/
+        name: repos
+        path: repos/
 
   install:
     runs-on: ubuntu-latest
@@ -156,16 +178,16 @@ jobs:
         platforms: ${{ matrix.arch }}
     - uses: actions/download-artifact@v4
       with:
-        name: repo
-        path: repo/
+        name: repos
+        path: repos/
     - run: echo "$DOCKERFILE" > Dockerfile
       env:
         DOCKERFILE: |-
           FROM ${{ matrix.distribution.container_image }}:${{ matrix.distribution.codename }}
-          COPY repo/ /tmp/repo
+          COPY repos/ /tmp/repos
           COPY <<eof /etc/apt/sources.list.d/xsscmd.sources
           Types: deb
-          URIs: file:///tmp/repo
+          URIs: file:///tmp/repos/${{ matrix.distribution.codename }}
           Suites: ${{ matrix.distribution.codename }}
           Components: main
           Trusted: yes

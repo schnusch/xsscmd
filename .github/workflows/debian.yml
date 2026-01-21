@@ -17,6 +17,7 @@ jobs:
           keyring:
             package: debian-archive-keyring
             path: /usr/share/keyrings/debian-archive-keyring.gpg
+          container_image: docker.io/library/debian
         arch:
         - deb: amd64
           qemu: amd64

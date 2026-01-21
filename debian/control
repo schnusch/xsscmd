@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: schnusch <schnusch@users.noreply.github.com>
 Build-Depends:
  debhelper-compat (= 13),
+ git,
  libx11-dev,
  libxss-dev,
 Standards-Version: 4.6.0

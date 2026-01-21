@@ -11,6 +11,9 @@ jobs:
         - 3142:3142
     strategy:
       matrix: &matrix
+        arch:
+        - amd64
+        - arm64
         distribution:
         - codename: trixie
           mirror: http://deb.debian.org/debian/
@@ -18,11 +21,6 @@ jobs:
             package: debian-archive-keyring
             path: /usr/share/keyrings/debian-archive-keyring.gpg
           container_image: docker.io/library/debian
-        arch:
-        - deb: amd64
-          qemu: amd64
-        - deb: arm64
-          qemu: aarch64
     steps:
     - run: >-
         echo 'Acquire::http::Proxy "http://localhost:3142";'
@@ -34,8 +32,6 @@ jobs:
         schroot
         mmdebstrap
         ${{ matrix.distribution.keyring.package }}
-        qemu-user-static
-        binfmt-support
         arch-test
         debhelper
         devscripts
@@ -62,15 +58,17 @@ jobs:
           $run_lintian = 1;
           # Display info tags.
           $lintian_opts = ['--display-info', '--verbose', '--fail-on', 'error,warning', '--info'];
-    - if: matrix.arch.qemu != 'amd64'
-      run: sudo update-binfmts --enable qemu-${{ matrix.arch.qemu }}
+    - if: matrix.arch != 'amd64'
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: ${{ matrix.arch }}
     - uses: actions/checkout@v4
 
     - id: cache-mmdebstrap-restore
       uses: actions/cache/restore@v4
       with:
-        key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
-        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        key: ${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
+        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
       run: mkdir -p .cache/sbuild
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
@@ -78,17 +76,17 @@ jobs:
         mmdebstrap
         --skip=output/dev
         --variant=buildd
-        --arch=${{ matrix.arch.deb }}
+        --arch=${{ matrix.arch }}
         --keyring=${{ matrix.distribution.keyring.path }}
         --aptopt='Acquire::http::Proxy "http://localhost:3142";'
         ${{ matrix.distribution.codename }}
-        .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
         ${{ matrix.distribution.mirror }}
     - if: steps.cache-mmdebstrap-restore.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        key: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
-        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        key: ${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
+        path: .cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
 
     - run: mkdir -p out
     - run: >-
@@ -96,12 +94,12 @@ jobs:
         --nolog
         --build-dir=out
         --dist=${{ matrix.distribution.codename }}
-        --arch=${{ matrix.arch.deb }}
-        --chroot=$PWD/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}.tar.zst
+        --arch=${{ matrix.arch }}
+        --chroot=$PWD/.cache/sbuild/${{ matrix.distribution.codename }}-${{ matrix.arch }}.tar.zst
 
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.distribution.codename }}-${{ matrix.arch.deb }}
+        name: ${{ matrix.distribution.codename }}-${{ matrix.arch }}
         path: out/
 
   reprepro:
@@ -150,11 +148,10 @@ jobs:
     strategy:
       matrix: *matrix
     steps:
-    - if: matrix.arch.qemu != 'amd64'
+    - if: matrix.arch  != 'amd64'
       uses: docker/setup-qemu-action@v3
       with:
-        platforms: ${{ matrix.arch.qemu }}
-    - uses: docker/setup-buildx-action@v3
+        platforms: ${{ matrix.arch }}
     - uses: actions/download-artifact@v4
       with:
         name: repo
@@ -177,7 +174,7 @@ jobs:
     - uses: docker/build-push-action@v6
       with:
         push: false
-        platform: linux/${{ matrix.arch.deb }}
+        platform: linux/${{ matrix.arch }}
         context: .
 
   publish:

@@ -139,6 +139,7 @@ jobs:
         sudo apt-get install -y --no-install-recommends
         reprepro
 
+    - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
       with:
         pattern: out-*
@@ -177,12 +178,22 @@ jobs:
     - run: >-
         sudo apt-get install -y --no-install-recommends
         exiftool
+        lowdown
     - uses: actions/setup-python@v6
       with:
         python-version: 3.x
     - run: pip install https://github.com/swantzter/staticdirindex/archive/refs/tags/v1.11.tar.gz
+    - run: '{ lowdown README.md; echo "$HEADER_HTML"; } > repos/header.html'
+      env:
+        HEADER_HTML: |-
+          <style>
+            tr:first-child {
+              display: none;
+            }
+          </style>
     - run: ln -s repos "${GITHUB_REPOSITORY##*/}"
     - run: staticdirindex --baseurl "/${GITHUB_REPOSITORY##*/}" "${GITHUB_REPOSITORY##*/}"
+    - run: rm repos/header.html
 
     - uses: actions/upload-pages-artifact@v3
       with:
